@@ -1,0 +1,31 @@
+# Secrets and local configuration (never commit values)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python / virtual environments
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Runtime artifacts
+.run/
+*.log
+.codebase-memory/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
