@@ -9,6 +9,7 @@ This folder is the single source of truth for how RHEA is designed, operated, tr
 | `PROJECT_REPORT.md` | Engineering report | What the system is, how it works, how to use it |
 | `BRANDING.md` | UI contract | Tokens and integrity rules for the Streamlit UI |
 | `architecture-decisions.md` | ADRs | Why hybrid retrieval, RRF, local fallback, LangGraph |
+| `architecture-audit.md` | Phase 1 audit | Verified root causes, live probe evidence, what to preserve |
 | `production-hardening.md` | Production checklist | What is implemented and what remains |
 | `agent-logs/` | Proof of work | One mandatory session log per agent session |
 | `audits/` | Incident record | Safety/red-team/performance audits and findings |

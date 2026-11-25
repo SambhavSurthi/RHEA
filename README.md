@@ -211,6 +211,10 @@ Every agent must index its steps into codebase memory (`codebase-memory`, projec
 
 ---
 
+## Current engineering status
+
+The Phase 1 repository audit is complete: [`docs/architecture-audit.md`](docs/architecture-audit.md) documents the verified root causes of irrelevant retrieval, wrong answers and unverifiable citations, including live API probe evidence. The phased rebuild plan is [`docs/plans/RHEA-001-production-rag-rebuild.md`](docs/plans/RHEA-001-production-rag-rebuild.md), tracked by [`docs/issues/RHEA-001-irrelevant-retrieval-and-weak-grounding.md`](docs/issues/RHEA-001-irrelevant-retrieval-and-weak-grounding.md). **No implementation code has been changed by Phase 1**; the plan awaits owner approval.
+
 ## Security notes
 
 Credentials and API keys are environment-driven; `.env` is excluded from container build contexts. Replace demo keys before any non-local deployment. The current safety layer includes RBAC, injection pattern scanning, trust-weighted ranking, prompt fencing and output validation; a production deployment should add TLS, a real identity provider, tenant isolation, rate limiting and a trained injection classifier (see `docs/production-hardening.md`).
