@@ -213,7 +213,7 @@ Every agent must index its steps into codebase memory (`codebase-memory`, projec
 
 ## Current engineering status
 
-The Phase 1 repository audit is complete: [`docs/architecture-audit.md`](docs/architecture-audit.md) documents the verified root causes of irrelevant retrieval, wrong answers and unverifiable citations, including live API probe evidence. The phased rebuild plan is [`docs/plans/RHEA-001-production-rag-rebuild.md`](docs/plans/RHEA-001-production-rag-rebuild.md), tracked by [`docs/issues/RHEA-001-irrelevant-retrieval-and-weak-grounding.md`](docs/issues/RHEA-001-irrelevant-retrieval-and-weak-grounding.md). **No implementation code has been changed by Phase 1**; the plan awaits owner approval.
+The Phase 1 repository audit is complete: [`docs/architecture-audit.md`](docs/architecture-audit.md) documents the verified root causes of irrelevant retrieval, wrong answers and unverifiable citations, including live API probe evidence. The phased rebuild plan is [`docs/plans/RHEA-001-production-rag-rebuild.md`](docs/plans/RHEA-001-production-rag-rebuild.md), with a detailed [`Phase 1 canonical-architecture plan`](docs/plans/RHEA-001-phase-1-canonical-architecture.md), tracked by [`docs/issues/RHEA-001-irrelevant-retrieval-and-weak-grounding.md`](docs/issues/RHEA-001-irrelevant-retrieval-and-weak-grounding.md). **No implementation code has been changed by Phase 1**; the plan awaits owner approval.
 
 ## Security notes
 

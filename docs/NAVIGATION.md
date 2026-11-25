@@ -12,6 +12,7 @@
 8. `docs/PROJECT_REPORT.md` — deeper engineering context when needed.
 9. `docs/architecture-audit.md` — verified root causes and live probe evidence (Phase 1).
 10. `docs/plans/RHEA-001-production-rag-rebuild.md` — the approved sequence of work.
+11. `docs/plans/RHEA-001-phase-1-canonical-architecture.md` — detailed first-phase execution plan.
 
 ## What lives where
 
@@ -29,6 +30,7 @@
 | Learn how to use RHEA | `docs/user-guide/` |
 | Understand why retrieval is wrong today | `docs/architecture-audit.md` |
 | Follow the production rebuild | `docs/issues/RHEA-001-*.md`, `docs/plans/RHEA-001-*.md` |
+| Plan Phase 1 in detail | `docs/plans/RHEA-001-phase-1-canonical-architecture.md` |
 
 ## Maintenance
 

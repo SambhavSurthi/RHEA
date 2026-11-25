@@ -33,6 +33,8 @@ Execution order follows the owner's stated priority (canonical → parsing → c
 
 ## Phase 1 — Canonical document/chunk architecture
 
+**Detailed plan:** `docs/plans/RHEA-001-phase-1-canonical-architecture.md` (work breakdown, schema, exit tests, rollback).
+
 **Intent:** establish one authoritative source for document content, versions, chunk identity and metadata so all indexes refer to the same IDs.
 
 **Deliverables:** PostgreSQL service + schema (`documents`, `document_versions`, `chunks`, `chunk_elements`, `ingestion_jobs`, `index_sync_state`, `citation_records`); object-store abstraction with local filesystem dev adapter; canonical `document_id`/`version_id`/`chunk_id` typed models; deterministic ID derivation; migration tool.
