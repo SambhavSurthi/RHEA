@@ -55,6 +55,7 @@ def documents_from_pdf(
                     "page": str(page.page),
                 },
                 trust=trust,  # type: ignore[arg-type]
+                source_bytes=data,
             )
         )
     return documents

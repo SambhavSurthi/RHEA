@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -39,6 +40,29 @@ class Settings(BaseSettings):
     api_keys_reader: str = ""
     api_keys_writer: str = ""
     api_keys_admin: str = ""
+
+    # Canonical document/chunk storage (Phase 1)
+    postgres_dsn: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("RHEA_POSTGRES_DSN", "POSTGRES_DSN"),
+    )
+    postgres_pool_size: int = Field(
+        default=5, validation_alias=AliasChoices("RHEA_POSTGRES_POOL_SIZE", "POSTGRES_POOL_SIZE")
+    )
+    postgres_statement_timeout: int = Field(
+        default=30,
+        validation_alias=AliasChoices(
+            "RHEA_POSTGRES_STATEMENT_TIMEOUT", "POSTGRES_STATEMENT_TIMEOUT"
+        ),
+    )
+    object_store_backend: str = Field(
+        default="filesystem",
+        validation_alias=AliasChoices("RHEA_OBJECT_STORE_BACKEND", "OBJECT_STORE_BACKEND"),
+    )
+    object_store_path: str = Field(
+        default="./storage/objects",
+        validation_alias=AliasChoices("RHEA_OBJECT_STORE_PATH", "OBJECT_STORE_PATH"),
+    )
 
     # Conversational memory (chat agent with LangGraph checkpointer)
     memory_max_tokens: int = 1800  # rough word budget before auto-compaction

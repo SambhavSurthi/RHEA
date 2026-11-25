@@ -175,8 +175,20 @@ if (-not (Test-Path $Python)) {
 }
 Write-Ok "Python: $Python"
 $env:PYTHONPATH = $BackendPath
+$PgPort = 5432
+if (Test-TcpPort '127.0.0.1' $PgPort) {
+    for ($candidate = $PgPort + 1; $candidate -le ($PgPort + 50); $candidate++) {
+        if (-not (Test-TcpPort '127.0.0.1' $candidate)) {
+            $PgPort = $candidate
+            break
+        }
+    }
+    Write-Ok "PostgreSQL host port 5432 is busy; using $PgPort"
+}
+$env:RHEA_POSTGRES_HOST_PORT = "$PgPort"
+$env:RHEA_POSTGRES_DSN = "postgresql+psycopg://rhea:rhea-demo@localhost:$PgPort/rhea"
 
-# --- 3. Infrastructure (Docker: Neo4j + Qdrant) ---------------------------
+# --- 3. Infrastructure (Docker: Neo4j, Qdrant, PostgreSQL) ----------------
 $DockerReady = $false
 if ($SkipDocker) {
     Write-Step 'Docker skipped by request (-SkipDocker); API will use in-memory stores'
@@ -197,19 +209,28 @@ if ($SkipDocker) {
     if ($DockerReady) {
         Write-Ok 'Docker daemon is ready'
         Write-Step 'Starting Neo4j and Qdrant containers'
-        & docker compose @ComposeArgs up -d neo4j qdrant
+        & docker compose @ComposeArgs up -d neo4j qdrant postgres
         if ($LASTEXITCODE -ne 0) { throw 'docker compose up failed. Check docker compose ps and .env.' }
-        Write-Info 'Waiting for Neo4j to become healthy and Qdrant to become ready...'
+        Write-Info 'Waiting for Neo4j, Qdrant and PostgreSQL to become ready...'
         $InfraOk = Wait-Until {
             $neoHealth = Get-ComposeHealth 'neo4j'
             $neoReady = ($neoHealth -eq 'healthy') -or
                 (-not $neoHealth -and (Test-HttpOk 'http://127.0.0.1:7474'))
-            $neoReady -and
+            $pgHealth = Get-ComposeHealth 'postgres'
+            $pgReady = ($pgHealth -eq 'healthy') -or
+                (-not $pgHealth -and (Test-TcpPort '127.0.0.1' 5432))
+            $neoReady -and $pgReady -and
             (Test-TcpPort '127.0.0.1' 7687) -and
             (Test-HttpOk 'http://127.0.0.1:6333/readyz')
-        } 180 'Neo4j and Qdrant'
-        if ($InfraOk) { Write-Ok 'Neo4j and Qdrant are up' }
+        } 180 'Neo4j, Qdrant and PostgreSQL'
+        if ($InfraOk) { Write-Ok 'Neo4j, Qdrant and PostgreSQL are up' }
         else { Write-Warn2 'Infrastructure did not become ready in time; API may use in-memory fallback.' }
+
+        Write-Step 'Applying canonical-store migrations'
+        $env:PYTHONPATH = $BackendPath
+        & $Python -m alembic upgrade head
+        if ($LASTEXITCODE -ne 0) { Write-Warn2 'Migration failed; canonical store will fall back to memory if configured.' }
+        else { Write-Ok 'Canonical schema is up to date' }
     } else {
         Write-Warn2 "Docker daemon did not become ready within $DockerWaitSeconds s."
         Write-Warn2 'Continuing in DEGRADED mode: the API will use in-memory vector/graph stores.'

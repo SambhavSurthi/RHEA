@@ -33,10 +33,13 @@ flowchart LR
 
     API --> P[Pipelines]
     P --> PDF[PDF page extraction]
+    P --> PG[(PostgreSQL<br/>canonical chunks + versions)]
+    P --> OBJ[(Object store<br/>original PDFs)]
     P --> ING[Chunk + embed + extract entities]
     P --> RET[Hybrid retrieval + RRF + rerank]
 
-    ING --> Q[(Qdrant<br/>vector chunks)]
+    PG --> Q[(Qdrant<br/>vector chunks)]
+    ING --> Q
     ING --> N[(Neo4j<br/>entities & relations)]
     RET --> Q
     RET --> N
@@ -49,7 +52,7 @@ flowchart LR
 
 ### Request flow
 
-**Ingest:** PDF → `pypdf` page extraction → injection scan → chunking (~700 chars) → hashing embeddings → entity/relation extraction → Qdrant + Neo4j.
+**Ingest:** PDF → original bytes preserved in object storage → canonical document/version/chunk rows in PostgreSQL with deterministic IDs → injection scan → chunking (~700 chars) → hashing embeddings → entity/relation extraction → Qdrant + Neo4j.
 
 **Query:** question → entity extraction → vector search + bounded graph traversal → deduplicate and fuse with RRF → lexical/trust reranking → fenced, trust-labelled prompt → LLM → answer with numbered citations → SSE events (`step`, `sources`, `token`, `summary`, `done`).
 
@@ -62,7 +65,7 @@ backend/rhea/
 ├── core/              settings, dependency injection, metrics/tracing
 ├── domain/            Pydantic request/response schemas
 ├── pipelines/         PDF, ingestion, retrieval, evaluation, eval runner
-├── stores/            Qdrant / Neo4j adapters (+ in-memory fallbacks)
+├── stores/            PostgreSQL canonical, Qdrant, Neo4j adapters (+ memory fallbacks)
 ├── services/          LLM providers, embeddings, agents, security scanning
 └── auth/              RBAC and approval tokens
 ```
@@ -74,7 +77,7 @@ The API layer contains no business logic; pipelines and services own the transfo
 ## Technology stack
 
 - **Backend:** FastAPI, Pydantic, LangGraph, Uvicorn
-- **Retrieval:** Qdrant, Neo4j (Cypher, bounded variable-length paths), hashing embeddings, RRF
+- **Retrieval:** PostgreSQL canonical store, Qdrant, Neo4j (bounded Cypher), hashing embeddings, RRF
 - **LLM:** pluggable local extractive provider, OpenAI Responses API, Anthropic Messages API
 - **Frontend:** Streamlit
 - **Operations:** Docker, Docker Compose, Prometheus, OpenTelemetry, pytest, ruff
@@ -93,7 +96,7 @@ powershell -ExecutionPolicy Bypass -File .\start-all.ps1
 powershell -ExecutionPolicy Bypass -File .\stop-all.ps1
 ```
 
-The startup script creates `.env` from `.env.example` if needed, prepares `.venv`, starts Docker Desktop if it is stopped, waits for Neo4j and Qdrant to become healthy, launches the API and Streamlit, and auto-selects alternative ports if 8000/8501 are already taken.
+The startup script creates `.env` from `.env.example` if needed, prepares `.venv`, starts Docker Desktop if it is stopped, waits for Neo4j, Qdrant and PostgreSQL to become healthy, applies Alembic migrations, launches the API and Streamlit, and auto-selects alternative ports if 8000/8501/5432 are already taken.
 
 | Service | Default URL |
 |---|---|
@@ -143,6 +146,7 @@ Key settings in `.env` (see `.env.example` for the full template):
 | Group | Variables |
 |---|---|
 | LLM | `LLM_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` |
+| Canonical store | `RHEA_POSTGRES_DSN`, `RHEA_POSTGRES_HOST_PORT`, `RHEA_OBJECT_STORE_BACKEND`, `RHEA_OBJECT_STORE_PATH` |
 | Vector store | `QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION=rhea_papers` |
 | Graph store | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `NEO4J_DATABASE` |
 | Retrieval | `EMBEDDING_DIM`, `TOP_K_VECTOR`, `TOP_K_GRAPH`, `RRF_K`, `GRAPH_MAX_HOPS` |
@@ -213,7 +217,7 @@ Every agent must index its steps into codebase memory (`codebase-memory`, projec
 
 ## Current engineering status
 
-The Phase 1 repository audit is complete: [`docs/architecture-audit.md`](docs/architecture-audit.md) documents the verified root causes of irrelevant retrieval, wrong answers and unverifiable citations, including live API probe evidence. The phased rebuild plan is [`docs/plans/RHEA-001-production-rag-rebuild.md`](docs/plans/RHEA-001-production-rag-rebuild.md), with a detailed [`Phase 1 canonical-architecture plan`](docs/plans/RHEA-001-phase-1-canonical-architecture.md), tracked by [`docs/issues/RHEA-001-irrelevant-retrieval-and-weak-grounding.md`](docs/issues/RHEA-001-irrelevant-retrieval-and-weak-grounding.md). **No implementation code has been changed by Phase 1**; the plan awaits owner approval.
+The Phase 1 repository audit is complete: [`docs/architecture-audit.md`](docs/architecture-audit.md) documents the verified root causes of irrelevant retrieval, wrong answers and unverifiable citations, including live API probe evidence. The phased rebuild plan is [`docs/plans/RHEA-001-production-rag-rebuild.md`](docs/plans/RHEA-001-production-rag-rebuild.md), with a detailed [`Phase 1 canonical-architecture plan`](docs/plans/RHEA-001-phase-1-canonical-architecture.md), tracked by [`docs/issues/RHEA-001-irrelevant-retrieval-and-weak-grounding.md`](docs/issues/RHEA-001-irrelevant-retrieval-and-weak-grounding.md). **Phase 1 (canonical document/chunk architecture) is implemented and verified**: PostgreSQL canonical store, deterministic IDs, original-PDF object storage, Alembic migration and index sync tracking. The rebuild plan is now at `implementing`; Phase 2 has not started.
 
 ## Security notes
 

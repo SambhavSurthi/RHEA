@@ -4,7 +4,7 @@
 - **Issue:** `docs/issues/RHEA-001-irrelevant-retrieval-and-weak-grounding.md`
 - **Author (handle/tool/model):** `rhea / opencode / hy4-flash-free`
 - **Date:** 2026-11-26
-- **Status:** draft — awaiting owner approval (dependency addition + new infrastructure service)
+- **Status:** done — implemented and all exit tests passed on 2026-11-26
 
 ---
 
@@ -166,3 +166,4 @@ Revert the Phase 1 commits, remove the `postgres` service from Compose, and leav
 ## 8. Revision log
 
 - 2026-11-26: initial detailed Phase 1 plan derived from verified audit P-04/P-05/P-09/P-18.
+- 2026-11-26: implemented. Deviations from the draft (all additive, no behavioural regression): synchronous SQLAlchemy engine is used because FastAPI routes/ingestion are synchronous; MinIO adapter deferred (filesystem + in-memory adapters only); PostgreSQL host port auto-selects a free port when 5432 is occupied and `RHEA_POSTGRES_DSN` is set by `start-all.ps1`; chunk ordinals are page-scoped (`page * 10000 + local`) so PDF pages sharing one version do not collide; `index_sync_state.scope` was added to track per-page indexing. Exit results: 1 document / 1 version / 2 chunks / 2 evidence rows for a 2-page PDF, stable IDs and Qdrant point count across repeat ingest, preserved original bytes with matching SHA256, 8 tables created by Alembic, 46 tests passing, ruff clean.

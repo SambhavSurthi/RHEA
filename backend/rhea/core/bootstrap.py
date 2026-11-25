@@ -12,7 +12,9 @@ from rhea.services.llm import (
     LocalExtractiveProvider,
     OpenAIProvider,
 )
+from rhea.services.object_store import ObjectStore, build_object_store
 from rhea.stores.graph import GraphStore, InMemoryGraphStore, Neo4jGraphStore
+from rhea.stores.relational import CanonicalStore, InMemoryCanonicalStore, PostgresCanonicalStore
 from rhea.stores.vector import InMemoryVectorStore, QdrantVectorStore, VectorStore
 
 
@@ -24,6 +26,8 @@ class Services:
     ingestion: IngestionService
     agent: RAGAgent
     chat: ConversationalRAG
+    canonical_store: CanonicalStore
+    object_store: ObjectStore
 
 
 def _vector_store(settings: Settings, embedder: HashingEmbedder) -> VectorStore:
@@ -54,6 +58,23 @@ def _graph_store(settings: Settings) -> GraphStore:
         return InMemoryGraphStore()
 
 
+def _canonical_store(settings: Settings) -> CanonicalStore:
+    if not settings.postgres_dsn:
+        if not settings.allow_in_memory_fallback:
+            raise RuntimeError("RHEA_POSTGRES_DSN is required when fallback is disabled")
+        return InMemoryCanonicalStore()
+    try:
+        return PostgresCanonicalStore(
+            settings.postgres_dsn,
+            settings.postgres_pool_size,
+            settings.postgres_statement_timeout,
+        )
+    except Exception:
+        if not settings.allow_in_memory_fallback:
+            raise
+        return InMemoryCanonicalStore()
+
+
 def _llm(settings: Settings) -> LLMProvider:
     provider = settings.llm_provider.lower()
     if provider == "openai" and settings.openai_api_key:
@@ -68,7 +89,16 @@ def build_services(settings: Settings | None = None) -> Services:
     embedder = HashingEmbedder(settings.embedding_dim)
     vector = _vector_store(settings, embedder)
     graph = _graph_store(settings)
-    ingestion = IngestionService(embedder, vector, graph, settings.block_quarantined_ingest)
+    canonical = _canonical_store(settings)
+    objects = build_object_store(settings.object_store_backend, settings.object_store_path)
+    ingestion = IngestionService(
+        embedder,
+        vector,
+        graph,
+        settings.block_quarantined_ingest,
+        canonical_store=canonical,
+        object_store=objects,
+    )
     retriever = HybridRetriever(
         embedder,
         vector,
@@ -87,4 +117,4 @@ def build_services(settings: Settings | None = None) -> Services:
         settings.memory_max_tokens,
         settings.memory_keep_recent,
     )
-    return Services(settings, vector, graph, ingestion, agent, chat)
+    return Services(settings, vector, graph, ingestion, agent, chat, canonical, objects)

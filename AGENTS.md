@@ -72,17 +72,20 @@ rhea/
 │   │   ├── main.py           application factory + router assembly
 │   │   ├── api/              health, ingest, query, chat, evaluation, admin, deps
 │   │   ├── core/             config, DI bootstrap, observability
-│   │   ├── domain/           Pydantic schemas
-│   │   ├── pipelines/        pdf, ingestion, retrieval, evaluation, runner
-│   │   ├── stores/           vector + graph adapters (with in-memory fallbacks)
-│   │   ├── services/         llm, embeddings, agent, chat, security
+│   │   ├── domain/           API schemas + canonical records
+│   │   ├── pipelines/        identity (deterministic IDs), pdf, ingestion,
+│   │   │                     retrieval, evaluation, runner
+│   │   ├── stores/           relational (PostgreSQL canonical), vector, graph
+│   │   │                     adapters (with in-memory fallbacks)
+│   │   ├── services/         object_store, llm, embeddings, agent, chat, security
 │   │   └── auth/             RBAC + approval tokens
 │   ├── data/                 demo papers + eval cases
 │   ├── tests/                deterministic tests
 │   └── Dockerfile
 ├── frontend/                 Streamlit app + Dockerfile
 ├── infra/                    Docker Compose topology
-├── scripts/                  check.ps1, run_eval.ps1
+├── migrations/               Alembic env + 0001_initial canonical schema
+├── scripts/                  check.ps1, run_eval.ps1, migrate.ps1
 └── docs/
     ├── NAVIGATION.md         read order
     ├── STRUCTURE.md          module ownership

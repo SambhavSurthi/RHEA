@@ -3,7 +3,7 @@
 - **Issue:** `docs/issues/RHEA-001-irrelevant-retrieval-and-weak-grounding.md`
 - **Author (handle/tool/model):** `rhea / opencode / hy4-flash-free`
 - **Date:** 2026-11-26
-- **Status:** <!-- draft | approved | implementing | done | superseded --> **draft — awaiting owner approval**
+- **Status:** **implementing — Phase 1 complete, Phase 2 not started**
 
 ## Goal / Non-goals
 

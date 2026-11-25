@@ -20,5 +20,10 @@ def health(services: Services = Depends(get_services)) -> dict:
             "backend": services.graph_store.backend_name,
             "healthy": services.graph_store.health(),
         },
+        "canonical": {
+            "backend": services.canonical_store.backend_name,
+            "healthy": services.canonical_store.health(),
+        },
+        "object_store": services.object_store.backend_name,
         "provider": services.agent.llm.name,
     }

@@ -1,4 +1,20 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rhea}
+      POSTGRES_USER: ${POSTGRES_USER:-rhea}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rhea-demo}
+    ports:
+      - "${RHEA_POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rhea} -d ${POSTGRES_DB:-rhea}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
   neo4j:
     image: neo4j:5.26.29-community
     environment:
@@ -30,6 +46,8 @@ services:
     environment:
       QDRANT_URL: http://qdrant:6333
       NEO4J_URI: bolt://neo4j:7687
+      RHEA_POSTGRES_DSN: postgresql+psycopg://${POSTGRES_USER:-rhea}:${POSTGRES_PASSWORD:-rhea-demo}@postgres:5432/${POSTGRES_DB:-rhea}
+      RHEA_OBJECT_STORE_PATH: /app/storage/objects
     ports:
       - "8000:8000"
     depends_on:
@@ -37,6 +55,8 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_started
+      postgres:
+        condition: service_healthy
 
   frontend:
     build:
@@ -52,3 +72,4 @@ services:
 volumes:
   neo4j_data:
   qdrant_data:
+  postgres_data:

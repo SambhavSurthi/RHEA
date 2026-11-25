@@ -29,11 +29,17 @@ backend/rhea/
 │   ├── evaluation.py  POST /v1/evaluate
 │   └── admin.py       approvals + approval-gated purge
 ├── core/              config.py, bootstrap.py (DI), observability.py
-├── domain/            models.py — all Pydantic schemas
-├── pipelines/         ingestion.py, retrieval.py, pdf.py, evaluation.py, runner.py
-├── stores/            vector.py (Qdrant/memory), graph.py (Neo4j/memory)
-├── services/          embeddings.py, llm.py, agent.py, chat.py, security.py
+├── domain/            models.py (API schemas), canonical.py (canonical records)
+├── pipelines/         identity.py (deterministic IDs), ingestion.py, retrieval.py,
+│                      pdf.py, evaluation.py, runner.py
+├── stores/            relational.py (PostgreSQL/memory canonical store),
+│                      vector.py (Qdrant/memory), graph.py (Neo4j/memory)
+├── services/          object_store.py (filesystem/memory), embeddings.py, llm.py,
+│                      agent.py, chat.py, security.py
 └── auth/              rbac.py — roles, API keys, approval tokens
+
+migrations/            Alembic environment + 0001_initial canonical schema
+scripts/migrate.ps1    migration entry point
 ```
 
 ### Why these boundaries
@@ -41,16 +47,20 @@ backend/rhea/
 - **api/** stays transport-only: validation, auth dependencies, response models. Business logic lives in pipelines/services, so endpoints can be tested independently and reused by other transports.
 - **core/** owns process-wide concerns (settings, dependency graph, metrics/tracing). `bootstrap.build_services()` is the only place that chooses real vs. in-memory backends.
 - **pipelines/** contains the data transformations: chunking + entity extraction, hybrid retrieval + RRF, PDF page extraction, and evaluation scoring.
-- **stores/** isolates Qdrant and Neo4j behind narrow protocols; in-memory implementations keep CI deterministic.
+- **stores/** isolates the canonical PostgreSQL store, Qdrant and Neo4j behind narrow protocols; in-memory implementations keep CI deterministic. Canonical IDs issued here are the only identity source for derived indexes.
 - **services/** hosts LLM providers (local/OpenAI/Anthropic), the single-shot LangGraph agent, the conversational LangGraph agent (memory/streaming/compaction) and injection scanning.
 - **domain/** prevents schema duplication between API and pipelines.
 
 ## Data flow
 
 ```
-PDF upload → pipelines/pdf.py (per-page text)
+PDF upload → pipelines/pdf.py (per-page text + original bytes)
+           → pipelines/identity.py (stable document/version/chunk IDs)
+           → stores/relational.py (canonical document/version/chunk rows)
+           → services/object_store.py (original PDF preserved)
            → pipelines/ingestion.py (scan, chunk, embed, extract entities/relations)
            → stores/vector.py (Qdrant) + stores/graph.py (Neo4j)
+           → index_sync_state records Qdrant/Neo4j sync per page
 
 Question   → api/chat.py → services/chat.py (LangGraph)
            → pipelines/retrieval.py (vector + BFS graph → RRF → trust rerank)
@@ -64,4 +74,4 @@ Question   → api/chat.py → services/chat.py (LangGraph)
 
 ## Container topology
 
-`infra/docker-compose.yml` builds `backend/Dockerfile` for the API and `frontend/Dockerfile` for Streamlit. The API container receives service hostnames (`http://qdrant:6333`, `bolt://neo4j:7687`) through Compose `environment` entries, overriding the host-oriented values in `.env`; the frontend receives `RAG_API_URL=http://api:8000`.
+`infra/docker-compose.yml` builds `backend/Dockerfile` for the API and `frontend/Dockerfile` for Streamlit, and runs PostgreSQL for the canonical store. The API container receives service hostnames (`http://qdrant:6333`, `bolt://neo4j:7687`, `postgresql+psycopg://...@postgres:5432/rhea`) through Compose `environment` entries, overriding host-oriented values in `.env`; the frontend receives `RAG_API_URL=http://api:8000`. The Postgres host port auto-selects a free port in `start-all.ps1` when 5432 is occupied.

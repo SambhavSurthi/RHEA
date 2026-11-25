@@ -8,6 +8,8 @@ class DocumentIn(BaseModel):
     text: str = Field(min_length=1)
     metadata: dict[str, str] = Field(default_factory=dict)
     trust: Literal["trusted", "unverified"] = "unverified"
+    # Original bytes for PDF uploads; kept out of API schemas/responses.
+    source_bytes: bytes | None = Field(default=None, exclude=True)
 
 
 class IngestRequest(BaseModel):
